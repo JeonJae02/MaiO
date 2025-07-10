@@ -1,6 +1,5 @@
 import numpy as np
 import statistics
-import matplotlib.pyplot as plt
 
 class data_extraction:
     def __init__(self, data_set, **kwargs):
@@ -113,9 +112,3 @@ class data_extraction:
     
     def stat_fft_amp(self, filtered_amp): #filtered amp를 feature추출
         return [np.mean(filtered_amp), np.std(filtered_amp), np.max(filtered_amp), np.min(filtered_amp), np.max(filtered_amp)-np.min(filtered_amp)]
-    
-    def show(self):
-        plt.figure() 
-        plt.plot(self.valid_freq, self.valid_amp)
-        plt.show()
-

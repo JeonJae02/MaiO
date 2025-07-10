@@ -1,5 +1,4 @@
 import numpy as np
-import math
 
 class slidingwindow:
     def __init__(self, total_array, Y_label, **kwargs): # 행동에 대한 라벨링 값 저장하는 리스트 )
@@ -49,32 +48,7 @@ class slidingwindow:
         T=int(T*100)
         n=int(n*100)
 
-        # 실행 횟수 계산
-        #max_steps = (len(data) - window_size) // step_size + 1
-        # 슬라이딩 윈도우 실행 Raw Data Cut이 각각 슬라이싱 된 데이터 셋 현재 코드는 출력하는 것으로만 되어 있으나 Data Exctract시 함수 형식에 맞게 잘 수정해서 사용해야함. 
-        # 라벨링은 class 내에 있는 변수 Y_label 로 지정해두었음. 
-        #win_date=np.array(data[i:i+T*100] for i in range(0, len(data) - T*100+1, n*100) if len(data[i:i+T*100]) == T*100)  
         for i in range(0, len(data) - T+1, n):
             if len(data[i:i+T]) == T:
                 win_date.append(data[i:i+T])
-        """for step in range(max_steps):
-            
-            start_roW= step * step_size
-            start_roW=int (start_roW)
-
-            end_roW = start_roW + window_size
-            end_roW=int (end_roW)
-            if(num_columns-start_roW<T*100):
-                break
-            else:
-                Raw_data_cut = data[start_roW:end_roW,:]  # 특정 열 범위 선택
-                #print(f"Step {step+1}: Raw_data_cut shape = {Raw_data_cut.shape}")
-                win_date.append(Raw_data_cut)
-
-            # 마지막 데이터 부족할 경우 처리
-        if (num_columns - (max_steps * step_size) < window_size)&(num_columns - (max_steps * step_size) != 0):
-                window_size=int(window_size)
-                Raw_data_cut = data[num_columns-window_size-1:num_columns-1, :]  # 마지막 window_size만큼 가져오기
-                #print(f"Final Step: Raw_data_cut shape = {Raw_data_cut.shape}")
-                win_date.append(Raw_data_cut)"""
         return win_date

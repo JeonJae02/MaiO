@@ -1,9 +1,6 @@
 import torch
-from model import GRUMotionClassifier
 from SlidingWindow import slidingwindow
-import numpy as np
 import Data_Extract
-import joblib  # LabelEncoder 불러오기
 
 def test_NN(test, model, label_encoder, Y_label, stat_variable=103, fft_variable=1):
     tests=[]
