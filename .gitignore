@@ -1,5 +1,7 @@
 libepo/
 
+venv/
+
 flask_session/
 
 MaiO_silje_bepo/flask_session/
