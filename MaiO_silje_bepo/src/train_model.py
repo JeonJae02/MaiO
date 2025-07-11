@@ -1,5 +1,5 @@
-from model import GRUMotionClassifier
-from model import RNNMotionClassifier
+from .model import GRUMotionClassifier
+from .model import RNNMotionClassifier
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.svm import SVC
 from . import Data_Extract
