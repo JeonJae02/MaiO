@@ -1,7 +1,7 @@
 from flask import Flask, request, jsonify, session, Response
 from flask_session import Session
 from flask_cors import CORS
-import makenumpyfile, train_model, test_model
+from . import makenumpyfile, train_model, test_model
 import numpy as np
 import uuid
 from datetime import timedelta

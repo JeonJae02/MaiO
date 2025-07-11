@@ -1,6 +1,6 @@
 import torch
-from SlidingWindow import slidingwindow
-import Data_Extract
+from .SlidingWindow import slidingwindow
+from . import Data_Extract
 
 def test_NN(test, model, label_encoder, Y_label, stat_variable=103, fft_variable=1):
     tests=[]

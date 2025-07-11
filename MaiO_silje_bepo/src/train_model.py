@@ -2,8 +2,8 @@ from model import GRUMotionClassifier
 from model import RNNMotionClassifier
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.svm import SVC
-import Data_Extract
-from SlidingWindow import slidingwindow
+from . import Data_Extract
+from .SlidingWindow import slidingwindow
 import torch
 import torch.nn as nn
 import torch.optim as optim
