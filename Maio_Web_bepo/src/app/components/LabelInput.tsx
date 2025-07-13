@@ -1,20 +1,18 @@
 'use client';
 
-import { useState , useEffect } from 'react';
+import { useState, useEffect } from 'react';
+import { fetchJson, API_BASE_URL } from '../../utils/fetcher';
 
 export default function LabelInput() {
   const [labels, setLabels] = useState<string[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [clientId, setClientId] = useState<string | null>(null);
 
-
-   const initializeClientId = async () => {
+  const initializeClientId = async () => {
     try {
-      const response = await fetch('http://127.0.0.1:5000/initialize', {
-        credentials: 'include',  // 쿠키 포함
+      const data = await fetchJson<{ client_id?: string }>(`${API_BASE_URL}/initialize`, {
+        credentials: 'include',
       });
-      const data = await response.json();
-      
       if (data.client_id) {
         setClientId(data.client_id);
         return true;
@@ -36,18 +34,13 @@ export default function LabelInput() {
         return;
       }
     }
-
     try {
-      const response = await fetch('http://127.0.0.1:5000/submit-labels', {
+      const data = await fetchJson<{ message?: string }>(`${API_BASE_URL}/submit-labels`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',  // 쿠키 포함
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ labels }),
       });
-      
-      const data = await response.json();
       alert(data.message);
       setLabels([]);
     } catch (error) {
@@ -55,7 +48,7 @@ export default function LabelInput() {
       alert('라벨 저장 중 오류가 발생했습니다.');
     }
   };
-    // 컴포넌트 마운트 시 초기화
+
   useEffect(() => {
     initializeClientId();
   }, []);

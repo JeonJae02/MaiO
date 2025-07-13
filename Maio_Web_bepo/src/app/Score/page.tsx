@@ -1,9 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import Link from "next/link";
 import Footer from '../../../component/Footer';
 import Image from 'next/image';
+import { fetchJson, API_BASE_URL } from '../../utils/fetcher';
 
 export default function MyModelAndStudyConfig() {
   const [selectedModel, setSelectedModel] = useState<string | null>(null);
@@ -30,6 +30,26 @@ export default function MyModelAndStudyConfig() {
     setNNeighbor('');
   };
 
+  // 모델 선택 API 호출 함수
+  const selectModel = async (modelLabel: string): Promise<{ message?: string; error?: string }> => {
+    return fetchJson<{ message?: string; error?: string }>(`${API_BASE_URL}/select_model`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ model: modelLabel }),
+    });
+  };
+
+  // 모델 파라미터 적용 API 호출 함수
+  const submitParams = async (params: (number | string)[]): Promise<{ message?: string; error?: string }> => {
+    return fetchJson<{ message?: string; error?: string }>(`${API_BASE_URL}/set_params`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ params }),
+    });
+  };
+
   const handleModelSubmit = async () => {
     if (!selectedModel) {
       alert('모델을 선택해주세요!');
@@ -39,23 +59,17 @@ export default function MyModelAndStudyConfig() {
     const modelLabel = selectedModelObj ? selectedModelObj.label : selectedModel.toUpperCase();
 
     try {
-      const response = await fetch('http://127.0.0.1:5000/select_model', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify({ model: modelLabel }),
-      });
-      const data = await response.json();
+      const data = await selectModel(modelLabel);
       setServerMessage(data.message || data.error || '서버 오류');
-    } catch {
-      setServerMessage('서버 통신 오류');
+    } catch (err: unknown) {
+      if (err instanceof Error) setServerMessage(err.message || '서버 통신 오류');
+      else setServerMessage('서버 통신 오류');
     }
   };
 
   const renderStudyConfig = () => {
-    if (selectedModel === 'knn' || selectedModel === 'svm') {
+    if (selectedModel === 'knn' || selectedModel === 'svm') 
+      {
       return (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           {selectedModel === 'knn' && (
@@ -64,7 +78,11 @@ export default function MyModelAndStudyConfig() {
               <input
                 type="number"
                 value={nNeighbor}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNNeighbor(e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                  setNNeighbor(e.target.value);
+                  // 입력값 변경 시 실시간 디버그
+                  console.log('[KNN 입력] nNeighbor:', e.target.value);
+                }}
                 placeholder="예: 5"
                 className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400"
               />
@@ -75,7 +93,11 @@ export default function MyModelAndStudyConfig() {
             <input
               type="number"
               value={testSplit}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setTestSplit(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                setTestSplit(e.target.value);
+                // 입력값 변경 시 실시간 디버그
+                console.log('[KNN 입력] testSplit:', e.target.value);
+              }}
               placeholder="예: 20"
               className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400"
             />
@@ -140,6 +162,8 @@ export default function MyModelAndStudyConfig() {
     const nNeigh = nNeighbor ? parseInt(nNeighbor, 10) : '';
 
     if (selectedModel === 'knn') {
+      // 디버그 로그 추가
+      console.log('[KNN 디버그] testSize:', testSize, 'nNeigh:', nNeigh);
       return [testSize, nNeigh];
     } else if (selectedModel === 'svm') {
       return [testSize, 0];
@@ -165,18 +189,11 @@ export default function MyModelAndStudyConfig() {
     }
 
     try {
-      const response = await fetch('http://127.0.0.1:5000/set_params', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify({ params }),
-      });
-      const data = await response.json();
+      const data = await submitParams(params);
       setServerMessage(data.message || data.error || '서버 오류');
-    } catch {
-      setServerMessage('서버 통신 오류');
+    } catch (err: unknown) {
+      if (err instanceof Error) setServerMessage(err.message || '서버 통신 오류');
+      else setServerMessage('서버 통신 오류');
     }
   };
 
@@ -251,7 +268,7 @@ export default function MyModelAndStudyConfig() {
         </div>
         <div className="mt-10">
           <Image
-            src="https://cdn.imweb.me/thumbnail/20240407/c8d48670ddce5.png"
+            src="/3D_2nd.jpeg"
             alt="플로깅 이미지"
             width={800}
             height={400}
@@ -295,14 +312,25 @@ export default function MyModelAndStudyConfig() {
 
        {/* Next Step Button */}
       <div className="flex justify-center mt-2 mb-8">
-        <Link href="/train">
-          <button
-            type="button"
-            className="text-center bg-green-500 text-white font-semibold px-6 py-3 rounded-lg hover:bg-green-600 transition"
-          >
-            다음 단계로 넘어가기
-          </button>
-        </Link>
+        <button
+          type="button"
+          className="text-center bg-green-500 text-white font-semibold px-6 py-3 rounded-lg hover:bg-green-600 transition"
+          // onClick={() => {
+          //   const params = getParamsArray();
+          //   if (selectedModel === 'knn') {
+          //     const [testSize, nNeigh] = params;
+          //     alert(`[KNN 디버그]\ntestSize: ${testSize}\nnNeigh: ${nNeigh}`);
+          //   } else {
+          //     alert(`[디버그]\nparams: ${JSON.stringify(params)}`);
+          //   }
+          //   
+          // }}
+        onClick={() =>{
+                window.location.href = "/train";
+            }}
+        >
+          다음 단계로 넘어가기
+        </button>
       </div>
       {/* Footer의 너비를 메인 div와 동일하게 맞춤 */}
       <div className="w-full max-w-7xl mx-auto px-6 sm:px-4">

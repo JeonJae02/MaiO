@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { fetchJson, API_BASE_URL } from '../../../utils/fetcher';
 
 export async function POST(request: NextRequest) {
   try {
@@ -12,20 +13,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const response = await fetch('http://127.0.0.1:5000/input_npy_data', {
+    const data = await fetchJson<{ total_count?: number; message?: string }>(`${API_BASE_URL}/input_npy_data`, {
       method: 'POST',
       body: formData,
     });
 
-    const data = await response.json();
     return NextResponse.json({
       success: true,
       total_count: data.total_count,
     });
-  } catch (error) {
-    console.error('Upload error:', error);
+  } catch (error: unknown) {
+    const errMsg = error instanceof Error ? error.message : '파일 업로드 중 오류가 발생했습니다.';
     return NextResponse.json(
-      { success: false, message: '파일 업로드 중 오류가 발생했습니다.' },
+      { success: false, message: errMsg },
       { status: 500 }
     );
   }

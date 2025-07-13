@@ -3,13 +3,13 @@
 import { useEffect } from 'react';
 import FileUpload from '../components/FileUpload';
 import LabelInput from '../components/LabelInput';
+import { fetchJson, API_BASE_URL } from '../../utils/fetcher';
 
 export default function TrainingPage() {
   useEffect(() => {
     const initialize = async () => {
       try {
-        const response = await fetch('http://127.0.0.1:5000/initialize');
-        const data = await response.json();
+        const data = await fetchJson<{ client_id?: string }>(`${API_BASE_URL}/initialize`);
         if (data.client_id) {
           // 클라이언트 ID 처리
           console.log('Client ID:', data.client_id);
@@ -21,6 +21,18 @@ export default function TrainingPage() {
 
     initialize();
   }, []);
+
+  const handleTrain = async () => {
+    try {
+      await fetchJson<{ message?: string }>(`${API_BASE_URL}/train_data`, {
+        method: 'GET',
+        credentials: 'include',
+      });
+      // 결과 처리
+    } catch {
+      // 에러 처리
+    }
+  };
 
   return (
     <div className="container mx-auto p-4">
@@ -41,12 +53,7 @@ export default function TrainingPage() {
           <button
             id="startTraining"
             className="bg-green-500 text-white px-6 py-3 rounded"
-            onClick={() => {
-              const eventSource = new EventSource('/api/train');
-              eventSource.onmessage = (event) => {
-                console.log(event.data);
-              };
-            }}
+            onClick={handleTrain}
           >
             학습 시작
           </button>

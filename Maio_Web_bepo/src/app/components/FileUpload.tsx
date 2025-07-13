@@ -1,35 +1,26 @@
 'use client';
 
 import { useState } from 'react';
+import { fetchJson, API_BASE_URL } from '../../utils/fetcher';
 
 export default function FileUpload() {
   const [result, setResult] = useState('');
 
   const handleFilesUpload = async (files: FileList) => {
     if (!files.length) return;
-
     const formData = new FormData();
-    // 여러 파일을 'files' 필드로 추가
     for (let i = 0; i < files.length; i++) {
       formData.append('files', files[i]);
     }
-
     try {
-      const response = await fetch('http://127.0.0.1:5000/input_raw_data', {
+      const data = await fetchJson<{ Y_label?: string[]; message?: string }>(`${API_BASE_URL}/input_raw_data`, {
         method: 'POST',
-        credentials: 'include', // 세션 유지
+        credentials: 'include',
         body: formData,
       });
-
-      const data = await response.json();
-      if (response.ok) {
-        setResult(`데이터 저장 완료! 라벨: ${JSON.stringify(data.Y_label)}`);
-      } else {
-        setResult(`오류: ${data.error || data.message}`);
-      }
-    } catch (err) {
-      setResult('파일 업로드 중 오류가 발생했습니다.');
-      console.error(err);
+      setResult(`데이터 저장 완료! 라벨: ${JSON.stringify(data.Y_label)}`);
+    } catch (err: unknown) {
+      setResult(err instanceof Error ? err.message : '파일 업로드 중 오류가 발생했습니다.');
     }
   };
 

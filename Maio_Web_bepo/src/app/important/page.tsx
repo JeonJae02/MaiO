@@ -3,7 +3,8 @@
 import Image from 'next/image';
 import Footer from "../../../component/Footer";
 import React, { useState } from 'react';
-import { LineChart, Line, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, Legend, ResponsiveContainer } from 'recharts';
+import { fetchJson, API_BASE_URL } from '../../utils/fetcher';
 
 // CSV 파싱 함수
 function parseCSV(text: string): { headers: string[], rows: Record<string, string | number>[] } {
@@ -187,17 +188,12 @@ export default function ImportantDataSection() {
       return;
     }
     try {
-      const response = await fetch('http://127.0.0.1:5000/input_raw_data', {
+      const data = await fetchJson<{ Y_label?: string[]; message?: string }>(`${API_BASE_URL}/input_raw_data`, {
         method: 'POST',
         credentials: 'include',
         body: formData,
       });
-      const data = await response.json();
-      if (response.ok) {
-        setUploadResult(`데이터 저장 완료! 라벨: ${JSON.stringify(data.Y_label)}`);
-      } else {
-        setUploadResult(`오류: ${data.error || data.message}`);
-      }
+      setUploadResult(`데이터 저장 완료! 라벨: ${JSON.stringify(data.Y_label)}`);
     } catch {
       setUploadResult('파일 업로드 중 오류가 발생했습니다.');
     }
@@ -227,7 +223,7 @@ export default function ImportantDataSection() {
           >
             <XAxis dataKey={xKey} />
             <YAxis />
-            <Tooltip />
+            {/* Tooltip 제거: 마우스 올려도 좌표값이 뜨지 않음 */}
             <Legend />
             {yKeys.map((y, idx) => (
               <Line key={y} type="monotone" dataKey={y} stroke={['#8884d8', '#82ca9d', '#ff7300', '#0088FE', '#FF8042'][idx % 5]} dot={false} />
@@ -409,7 +405,7 @@ export default function ImportantDataSection() {
               const fftSelected = selectedOptions.includes('FFT');
 
               try {
-                const response = await fetch('http://127.0.0.1:5000/set_train', {
+                const data = await fetchJson<{ message?: string }>(`${API_BASE_URL}/set_train`, {
                   method: 'POST',
                   headers: {
                     'Content-Type': 'application/json',
@@ -420,14 +416,9 @@ export default function ImportantDataSection() {
                     fft_var: fftSelected,
                   }),
                 });
-                const data = await response.json();
-                if (response.ok) {
-                  alert(data.message || '서버에 저장되었습니다!');
-                } else {
-                  alert(data.error || '서버 오류');
-                }
-              } catch {
-                alert('서버 통신 오류');
+                alert(data.message || '서버에 저장되었습니다!');
+              } catch (err) {
+                alert(err instanceof Error ? err.message : '서버 통신 오류');
               }
             }}
             className="w-full mt-6 bg-green-500 text-white px-6 py-3 rounded-lg hover:bg-green-600 transition"

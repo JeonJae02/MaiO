@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
+import { API_BASE_URL } from '../../utils/fetcher';
 
 export default function TestingPage() {
   const [isTraining, setIsTraining] = useState(false);
@@ -13,7 +14,7 @@ export default function TestingPage() {
     setLogs([]);
     setIsCompleted(false);
 
-    const eventSource = new EventSource('http://127.0.0.1:5000/train_data', { withCredentials: true } as unknown as EventSourceInit);
+    const eventSource = new EventSource(`${API_BASE_URL}/train_data`, { withCredentials: true } as unknown as EventSourceInit);
 
     eventSource.onmessage = (event: MessageEvent) => {
       if (event.data === 'Training completed.') {

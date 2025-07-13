@@ -16,9 +16,44 @@ MaiO_silje_bepo/src/.env
 
 MaiO_silje_bepo/tmp/
 
+# dependencies
 Maio_Web_bepo/node_modules
+Maio_Web_bepo/.pnp
+Maio_Web_bepo/.pnp.*
+Maio_Web_bepo/.yarn/*
+Maio_Web_bepo/!.yarn/patches
+Maio_Web_bepo/!.yarn/plugins
+Maio_Web_bepo/!.yarn/releases
+Maio_Web_bepo/!.yarn/versions
 
-Maio_Web_bepo/.next
+# testing
+Maio_Web_bepo/coverage
+
+# next.js
+Maio_Web_bepo/.next/
+Maio_Web_bepo/out/
+
+# production
+Maio_Web_bepo/build
+
+# misc
+Maio_Web_bepo/.DS_Store
+Maio_Web_bepo/*.pem
+
+# debug
+Maio_Web_bepo/npm-debug.log*
+Maio_Web_bepo/yarn-debug.log*
+Maio_Web_bepo/yarn-error.log*
+Maio_Web_bepo/.pnpm-debug.log*
+
+# vercel
+Maio_Web_bepo/.vercel
+
+# typescript
+Maio_Web_bepo/*.tsbuildinfo
+Maio_Web_bepo/next-env.d.ts
+
+Maio_Web_bepo/README.md
 
 tmp/
 

@@ -77,22 +77,31 @@ export default function Header() {
             <Link href="/" className="">
               <p className="hover:font-semibold">마이오</p>
             </Link>
-            <Link href="/" className="">
-              <p className="hover:font-semibold">문의하기</p>
-            </Link>
           </nav>
           <div className="hidden md:flex items-center">
-            
-            <Link href="/" className="bg-green-500 hover:bg-green-600 text-white font-semibold rounded-md px-4 py-2 text-sm transition-colors ease-in-out cursor-pointer">
+            <button
+              type="button"
+              className="bg-green-500 hover:bg-green-600 text-white font-semibold rounded-md px-4 py-2 text-sm transition-colors ease-in-out cursor-pointer"
+              onClick={() => {
+                if (typeof window !== "undefined") {
+                  const contact = `문의는\n전화: 010-8269-0413\n이메일: jhsong02@postech.ac.kr`;
+                  if (window.confirm(`${contact}\n\n전화 연결을 하시겠습니까? (취소 시 이메일 앱이 열립니다)`)) {
+                    window.location.href = "tel:01082690413";
+                  } else {
+                    window.location.href = "mailto:jhsong02@postech.ac.kr";
+                  }
+                }
+              }}
+            >
               수업 신청하기
-            </Link>
+            </button>
           </div>
 
           {/* Mobile Menu Button and Download Button */}
           <div className="md:hidden flex items-center gap-2">
             <Link
               href="/"
-              className="bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-md px-3 py-1.5 text-sm transition-colors ease-in-out cursor-pointer"
+              className="bg-orange-500 hover:bg-green-600 text-white font-semibold rounded-md px-3 py-1.5 text-sm transition-colors ease-in-out cursor-pointer"
             >
               수업 신청하기
             </Link>

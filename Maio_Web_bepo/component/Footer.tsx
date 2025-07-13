@@ -1,3 +1,5 @@
+'use client';
+
 import Link from "next/link"
 import { ArrowUpRight } from "lucide-react"
 
@@ -31,19 +33,10 @@ export default function Footer() {
                   Maio ML 시작하기
                 </Link>
               </li>
-              <li>
-                <Link href="/service" className="hover:underline underline-offset-4 inline-block py-1">
-                  서비스 소개
-                </Link>
-              </li>
+            
               <li>
                 <Link href="/contact" className="hover:underline underline-offset-4 inline-block py-1">
                   문의하기
-                </Link>
-              </li>
-              <li>
-                <Link href="/login" className="hover:underline underline-offset-4 inline-block py-1">
-                  로그인
                 </Link>
               </li>
             </ul>
@@ -57,6 +50,10 @@ export default function Footer() {
                 <Link
                   href="#"
                   className="w-full flex items-center justify-between border border-gray-200 rounded-lg p-3 hover:bg-gray-100 transition-colors active:bg-gray-200"
+                  onClick={e => {
+                    e.preventDefault();
+                    alert('아직 준비중입니다.');
+                  }}
                 >
                   <span>App Store</span>
                   <ArrowUpRight className="h-4 w-4" />
@@ -64,6 +61,10 @@ export default function Footer() {
                 <Link
                   href="#"
                   className="w-full flex items-center justify-between border border-gray-200 rounded-lg p-3 hover:bg-gray-100 transition-colors active:bg-gray-200"
+                  onClick={e => {
+                    e.preventDefault();
+                    alert('아직 준비중입니다.');
+                  }}
                 >
                   <span>Google Play</span>
                   <ArrowUpRight className="h-4 w-4" />
