@@ -35,7 +35,7 @@ PARAM_COUNTS = {
     "SVM": 2
 }
 
-@app.route('/initialize', methods=['GET'])
+@app.route('/api/initialize', methods=['GET'])
 def initialize():
     # 세션에 client_id가 없으면 새로 생성
     if 'client_id' not in session:
@@ -43,7 +43,7 @@ def initialize():
     return jsonify({"client_id": session['client_id']})
 
 
-@app.route('/submit-labels', methods=['POST'])
+@app.route('/api/submit-labels', methods=['POST'])
 def submit_labels():
     client_id = session.get('client_id')
     if 'client_id' not in session:
@@ -58,7 +58,7 @@ def submit_labels():
     return jsonify({"message": "Labels 저장 완료!"})
     
 
-@app.route("/input_raw_data", methods=["POST"])
+@app.route("/api/input_raw_data", methods=["POST"])
 def make_data_from_csv():
     client_id = session.get('client_id')
     if not client_id:
@@ -122,7 +122,7 @@ def make_data_from_csv():
 }
 )
 
-@app.route("/input_npy_data", methods=["POST"])
+@app.route("/api/input_npy_data", methods=["POST"])
 def make_data_from_npy():
     client_id = session.get('client_id')
     if not client_id:
@@ -152,7 +152,7 @@ def make_data_from_npy():
         "total_count": total_count
     })
 
-@app.route("/set_train", methods=["POST"])
+@app.route("/api/set_train", methods=["POST"])
 def set_train():
     client_id = session.get('client_id')
     if not client_id:
@@ -164,7 +164,7 @@ def set_train():
 
     return jsonify({'message': 'Data saved successfully!'})
 
-@app.route("/select_model", methods=["POST"])
+@app.route("/api/select_model", methods=["POST"])
 def select_model():
     client_id = session.get('client_id')
     if not client_id:
@@ -181,7 +181,7 @@ def select_model():
         return jsonify({'message': f'{selected_model} 모델이 저장되었습니다!'})
     return jsonify({'message': '모델 선택에 실패했습니다.'}), 400
 
-@app.route("/set_params", methods=["POST"])
+@app.route("/api/set_params", methods=["POST"])
 def set_params():
     client_id = session.get('client_id')
     if not client_id:
@@ -218,7 +218,7 @@ def set_params():
     return jsonify({'message': '매개변수 설정 완료!.'})
 
     
-@app.route("/train_data", methods=["GET"])
+@app.route("/api/train_data", methods=["GET"])
 def train_data():
     client_id = session.get('client_id')
     if not client_id:
@@ -305,7 +305,7 @@ def train_data():
         return Response(generate(), content_type="text/event-stream")
 
 
-@app.route("/input_npy_data_test", methods=["POST"]) #테스트 할 데이터를 넘파이로 받아줌. input _ csv requst 만들어야됨. 
+@app.route("/api/input_npy_data_test", methods=["POST"]) #테스트 할 데이터를 넘파이로 받아줌. input _ csv requst 만들어야됨. 
 def make_data_from_npy_test():
     client_id = session.get('client_id')
     if not client_id:
@@ -336,7 +336,7 @@ def make_data_from_npy_test():
     })
 
 
-@app.route("/test", methods=["GET"])
+@app.route("/api/test", methods=["GET"])
 def test():
     client_id = session.get('client_id')
     if not client_id:
@@ -373,7 +373,7 @@ def test():
         raise FileNotFoundError("Model or Label Encoder not found!")
 
 
-@app.route('/clear', methods=['POST'])
+@app.route('/api/clear', methods=['POST'])
 def clear_session():
     # 현재 클라이언트의 세션 초기화
     session.clear()
@@ -383,7 +383,7 @@ if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
 # 사용자 별로 쌓인 세션을 관리하기 위해 Flask-Session 
 
-@app.route('/login', methods=['POST'])
+@app.route('/api/login', methods=['POST'])
 def login():
     # 클라이언트가 로그인하면 세션 ID 생성
     client_id = request.json.get('client_id')
