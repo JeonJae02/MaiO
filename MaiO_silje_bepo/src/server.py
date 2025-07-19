@@ -41,7 +41,7 @@ PARAM_COUNTS = {
     "SVM": 2
 }
 
-@app.route("/")
+@app.route("/api")
 def health_check():
     return "OK", 200
 
