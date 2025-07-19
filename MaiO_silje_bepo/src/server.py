@@ -12,10 +12,13 @@ from threading import Thread
 import time
 from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
+import redis
 
 load_dotenv()
 
 app = Flask(__name__)
+
+redis_url = os.getenv("SESSION_REDIS_URL")
 
 # 세션 설정
 app.config['SECRET_KEY'] = os.getenv("SECRET_KEY")  # 세션 암호화를 위한 키
@@ -23,6 +26,7 @@ app.config['SESSION_TYPE'] = os.getenv("SESSION_TYPE")    # 세션 데이터를 
 app.config['SESSION_COOKIE_SECURE'] = os.getenv("SESSION_COOKIE_SECURE") # HTTPS 환경에서만 쿠키 전송
 app.config['SESSION_COOKIE_HTTPONLY'] = os.getenv("SESSION_COOKIE_HTTPONLY") # HTTP 요청에서만 쿠키 접근 가능
 app.config['SESSION_COOKIE_SAMESITE'] = os.getenv("SESSION_COOKIE_SAMESITE") # SameSite 속성 설정
+app.config['SESSION_REDIS'] = redis.from_url(redis_url)
 
 Session(app)
 if os.environ.get('FLASK_ENV') == 'development':
@@ -36,6 +40,10 @@ PARAM_COUNTS = {
     "KNN": 2,
     "SVM": 2
 }
+
+@app.route('/', methods=['GET'])
+def start():
+    return jsonify({"서버 작동 중"})
 
 @app.route('/api/initialize', methods=['GET'])
 def initialize():
