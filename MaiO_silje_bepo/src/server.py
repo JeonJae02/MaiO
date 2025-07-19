@@ -41,9 +41,9 @@ PARAM_COUNTS = {
     "SVM": 2
 }
 
-@app.route('/', methods=['GET'])
-def start():
-    return jsonify({"서버 작동 중"})
+@app.route("/")
+def health_check():
+    return "OK", 200
 
 @app.route('/api/initialize', methods=['GET'])
 def initialize():
