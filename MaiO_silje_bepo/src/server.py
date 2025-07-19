@@ -25,7 +25,9 @@ app.config['SESSION_COOKIE_HTTPONLY'] = os.getenv("SESSION_COOKIE_HTTPONLY") # H
 app.config['SESSION_COOKIE_SAMESITE'] = os.getenv("SESSION_COOKIE_SAMESITE") # SameSite 속성 설정
 
 Session(app)
-CORS(app, supports_credentials=True, origins=['http://localhost:3000']) #로컬용, 실제 서버에서는 Ngnix가 함.
+if os.environ.get('FLASK_ENV') == 'development':
+    print("Running in development mode, enabling CORS for localhost.")
+    CORS(app, supports_credentials=True, origins=['http://localhost:3000'])
 app.permanent_session_lifetime = timedelta(days=1)
 
 PARAM_COUNTS = {
@@ -45,9 +47,9 @@ def initialize():
 
 @app.route('/api/submit-labels', methods=['POST'])
 def submit_labels():
-    client_id = session.get('client_id')
     if 'client_id' not in session:
         session['client_id'] = str(uuid.uuid4())  # 고유한 UUID 생성
+    client_id = session.get('client_id')
 
     data = request.get_json()
     labels = data.get('labels', [])
