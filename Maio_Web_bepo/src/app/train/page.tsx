@@ -76,7 +76,24 @@ export default function TestingPage() {
           )}
         </div>
       </div>
-     
+
+      {/* 다음 단계로 넘어가기 버튼 추가 */}
+      {isCompleted && (
+        <div className="flex justify-center w-full mt-8">
+          <button
+            type="button"
+            onClick={() => window.location.href = "/testing"}
+            className="text-center bg-green-500 text-white font-semibold px-6 py-3 rounded-lg hover:bg-green-600 transition"
+          >
+            다음 단계로 넘어가기
+          </button>
+        </div>
+      )}
+
+      {/* 하단 설명 텍스트 */}
+      <p className="text-gray-500 text-sm text-center">
+        학습이 완료되면 테스트 페이지로 이동할 수 있습니다.
+      </p>
     </div>
   );
 }

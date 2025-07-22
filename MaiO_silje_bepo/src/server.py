@@ -2,7 +2,9 @@ from flask import Flask, request, jsonify, session, Response
 from flask_session import Session
 from flask_cors import CORS
 from . import makenumpyfile, train_model, test_model
+from .RawPreProcessing import rawpreprocessing
 import numpy as np
+import pandas as pd
 import uuid
 from datetime import timedelta
 import os
@@ -65,14 +67,14 @@ def submit_labels():
     session['labels'] = labels
     
     print(f"클라이언트 {client_id}의 데이터: {labels}")
-    return jsonify({"message": "Labels 저장 완료!"})
+    return jsonify({"message": "라벨 저장 완료!"})
     
 
 @app.route("/api/input_raw_data", methods=["POST"])
 def make_data_from_csv():
     client_id = session.get('client_id')
     if not client_id:
-        return jsonify({"error": "Session not initialized"}), 401
+        return jsonify({"error": "앞부분부터 차근차근 진행해보세요. Session not initialized"}), 401
     
     # tmp/{client_id} 폴더 생성
     client_tmp_dir = os.path.join('tmp', client_id)
@@ -80,7 +82,7 @@ def make_data_from_csv():
 
     # 파일 업로드 처리
     if 'files' not in request.files:
-        return jsonify({"error": "No files part"}), 400
+        return jsonify({"error": "파일이 잘 못 되었어요. 다시다시~. No files part"}), 400
 
     files = request.files.getlist('files')
     
@@ -98,11 +100,11 @@ def make_data_from_csv():
 
     if not labels:
         print("[ERROR] 세션에 라벨이 없습니다!")
-        return jsonify({"error": "Labels not found in session. 먼저 라벨을 제출하세요."}), 400
+        return jsonify({"error": "먼저 라벨을 제출하세요. Labels not found in session."}), 400
     
     # 파일명에서 공통 prefix 추출 (예: RawData)
     if not saved_files:
-        return jsonify({"error": "No files uploaded"}), 400
+        return jsonify({"error": "파일이 업로드 되지 않았어요. 파일부터 업로드하고 다시 시도하세요. No files uploaded"}), 400
     base_name = os.path.splitext(saved_files[0])[0]
 
     labels = session.get('labels')
@@ -127,7 +129,7 @@ def make_data_from_csv():
         return jsonify({"error": str(e)}), 500
 
     return jsonify({
-    "message": "Data saved successfully",
+    "message": "데이터가 잘 저장되었어요. Data saved successfully",
     "Y_label": y_label.tolist() if hasattr(y_label, "tolist") else y_label
 }
 )
@@ -136,7 +138,7 @@ def make_data_from_csv():
 def make_data_from_npy():
     client_id = session.get('client_id')
     if not client_id:
-        return jsonify({"error": "Session not initialized"}), 401
+        return jsonify({"error": "처음에 건너뛴거 있나요? 처음부터 차근차근하게 해봐요. Session not initialized"}), 401
     
     if 'file' not in request.files:
         return jsonify({"success": False, "message": "파일이 업로드되지 않았습니다."})
@@ -157,7 +159,7 @@ def make_data_from_npy():
 
     return jsonify({
         "success": True,
-        "message": "Data saved successfully",
+        "message": "데이터가 잘 저장되었어요.",
         "Y_label": session["labels"],  # 현재 세션 데이터 반환
         "total_count": total_count
     })
@@ -166,19 +168,19 @@ def make_data_from_npy():
 def set_train():
     client_id = session.get('client_id')
     if not client_id:
-        return jsonify({"error": "Session not initialized"}), 401
+        return jsonify({"error": "앞에서부터 차근차근 진행해보세요. Session not initialized"}), 401
     
     data=request.json
     session["stat_var"]=data.get('stat_var')
     session["fft_var"]=data.get('fft_var')
 
-    return jsonify({'message': 'Data saved successfully!'})
+    return jsonify({'message': '학습을 위한 설정이 완료되었어요!'})
 
 @app.route("/api/select_model", methods=["POST"])
 def select_model():
     client_id = session.get('client_id')
     if not client_id:
-        return jsonify({"error": "Session not initialized"}), 401
+        return jsonify({"error": "앞에서부터 해야죠~. Session not initialized"}), 401
     
     data=request.json
     selected_model = data.get('model')
@@ -195,7 +197,7 @@ def select_model():
 def set_params():
     client_id = session.get('client_id')
     if not client_id:
-        return jsonify({"error": "Session not initialized"}), 401
+        return jsonify({"error": "건너뛰고 그라믄 안돼~. Session not initialized"}), 401
     
     if "model" not in session:
         return jsonify(ok=False, error="모델을 먼저 선택하세요"), 400
@@ -232,7 +234,7 @@ def set_params():
 def train_data():
     client_id = session.get('client_id')
     if not client_id:
-        return jsonify({"error": "Session not initialized"}), 401
+        return jsonify({"error": "땡땡땡! 처음부터 하셔야할 것 같네요~. Session not initialized"}), 401
     
     t_data_set = session["data_set"]
     t_labels= session["labels"]
@@ -275,7 +277,7 @@ def train_data():
                 break
             yield f"data: {message}\n\n"
 
-        yield "data: Training completed.\n\n"
+        yield "data : 학습이 완료되었습니다. \n\n"
 
     def generate_M():
         q = Queue()
@@ -307,19 +309,227 @@ def train_data():
                 break
             yield f"data: {message}\n\n"
 
-        yield "data: Training completed.\n\n"
+        yield "data: 학습이 완료되었습니다.\n\n"
 
     if selected_model == 'KNN' or selected_model == 'SVM':
         return Response(generate_M(), content_type="text/event-stream")
     else:
         return Response(generate(), content_type="text/event-stream")
 
+@app.route("/api/input_csv_data_test", methods=["POST"]) #테스트 할 데이터를 csv로 받아줌. 
+def input_csv_data_test():
+    client_id = session.get('client_id')
+    if not client_id:
+        return jsonify({"error": "세션이 만료되었습니다. Session not initialized"}), 401
+    
+    if 'file' not in request.files:
+        return jsonify({"success": False, "message": "파일이 업로드되지 않았습니다."})
+    file = request.files['file']
 
+    # 파일 확장자 확인
+    if not file.filename.endswith('.csv'):
+        return jsonify({"success": False, "message": "CSV 파일만 업로드 가능합니다."})
+    
+    df = pd.read_csv(file)
+    data = rawpreprocessing.make_csv_array(df)
+
+    try:
+        print(f"[DEBUG] 원본 데이터 shape: {data.shape}")
+
+        # 데이터가 4 * N 형태인지 확인
+        if data.shape[0] != 4:
+            raise ValueError(f"데이터의 첫 번째 차원이 4가 아닙니다: {data.shape[0]}")
+        total_length = data.shape[1] / 100
+        
+        # 세션에 원본 데이터 저장
+        session["original_csv_data"] = data
+        session["csv_filename"] = file.filename
+
+        print(f"[DEBUG] 총 길이: {total_length}")
+
+        return jsonify({
+            "success": True,
+            "message": "CSV 파일이 성공적으로 업로드되었습니다.",
+            "file_info": {
+                "filename": file.filename,
+                "data_shape": list(data.shape),
+                "total_samples": total_length,
+                "duration_seconds": round(total_length, 2),
+                "max_possible_segments": total_length // 300  # 3초 단위 최대 세그먼트 수
+            }
+        })
+        
+    except Exception as e:
+        print(f"[ERROR] CSV 파일 처리 중 오류: {e}")
+        return jsonify({"success": False, "message": f"CSV 파일 처리 중 오류가 발생했습니다: {str(e)}"})
+
+@app.route("/api/validate_parameters", methods=["POST"])
+def validate_parameters():    
+    """x값(trim_seconds)과 y값(segments)의 유효성을 검사하는 함수"""
+    client_id = session.get('client_id')
+    if not client_id:
+        return jsonify({"error": "세션이 만료되었습니다. Session not initialized"}), 401
+    
+    # 세션에 CSV 데이터가 있는지 확인
+    if "original_csv_data" not in session:
+        return jsonify({"success": False, "message": "먼저 CSV 파일을 업로드해주세요."})
+    
+    try:
+        trim_seconds = float(request.json.get('trim_seconds', 0))
+        y_segments = int(request.json.get('y_segments', 1))
+    except (ValueError, TypeError):
+        return jsonify({"success": False, "message": "trim_seconds와 y_segments는 유효한 숫자여야 합니다."})
+    
+    # 기본 유효성 검사
+    if trim_seconds < 0:
+        return jsonify({"success": False, "message": "trim_seconds는 0 이상이어야 합니다. 다시 입력해주세요."})
+    
+    if y_segments <= 0:
+        return jsonify({"success": False, "message": "y_segments는 1 이상이어야 합니다. 다시 입력해주세요."})
+    
+    # CSV 데이터 정보 가져오기
+    data = session["original_csv_data"]
+    total_length = data.shape[1]
+    
+    # 계산
+    trim_samples = int(trim_seconds * 100)  # 100Hz
+    min_required_samples = y_segments * 300  # 각 세그먼트당 300샘플(3초)
+    after_trim_length = total_length - trim_samples
+    
+    print(f"[DEBUG] 파라미터 검증 - trim_seconds: {trim_seconds}, y_segments: {y_segments}")
+    print(f"[DEBUG] total_length: {total_length}, after_trim_length: {after_trim_length}, min_required: {min_required_samples}")
+    
+    # 유효성 검사
+    if trim_samples >= total_length:
+        return jsonify({
+            "success": False, 
+            "message": f"trim_seconds 값이 너무 큽니다. 전체 데이터 길이({total_length/100:.2f}초)보다 작아야 합니다. 다시 입력해주세요."
+        })
+    
+    if after_trim_length < min_required_samples:
+        max_possible_segments = after_trim_length // 300
+        return jsonify({
+            "success": False,
+            "message": f"현재 설정으로는 데이터가 부족합니다. trim_seconds={trim_seconds}초 후 최대 {max_possible_segments}개의 세그먼트만 생성 가능합니다. y_segments를 {max_possible_segments} 이하로 설정하거나 trim_seconds를 줄여주세요."
+        })
+    
+    # 유효한 경우 - 세션에 파라미터 저장하지 않음 (아직 확정 안됨)
+    available_segments = after_trim_length // 300
+    final_segments = min(y_segments, available_segments)
+    
+    return jsonify({
+        "success": True,
+        "message": "파라미터가 유효합니다. 업로드를 진행할 수 있습니다.",
+        "validation_info": {
+            "trim_seconds": trim_seconds,
+            "y_segments": y_segments,
+            "total_samples": total_length,
+            "after_trim_samples": after_trim_length,
+            "available_segments": available_segments,
+            "final_segments": final_segments,
+            "will_use_all_segments": final_segments == y_segments
+        }
+    })
+
+# 3. 최종 처리 및 npy 파일 저장 함수
+@app.route("/api/process_and_save", methods=["POST"])
+def process_and_save():
+    """유효한 파라미터로 3차원 npy 파일을 생성하고 저장하는 함수"""
+    client_id = session.get('client_id')
+    if not client_id:
+        return jsonify({"error": "세션이 만료되었습니다. Session not initialized"}), 401
+    
+    # 세션에 CSV 데이터가 있는지 확인
+    if "original_csv_data" not in session:
+        return jsonify({"success": False, "message": "먼저 CSV 파일을 업로드해주세요."})
+    
+    try:
+        trim_seconds = float(request.json.get('trim_seconds', 0))
+        y_segments = int(request.json.get('y_segments', 1))
+        save_filename = request.json.get('save_filename', 'processed_data')  # 저장할 파일명
+    except (ValueError, TypeError):
+        return jsonify({"success": False, "message": "파라미터가 올바르지 않습니다."})
+    
+    # 파라미터 재검증 (안전성을 위해)
+    data = session["original_csv_data"]
+    total_length = data.shape[1]
+    trim_samples = int(trim_seconds * 100)
+    min_required_samples = y_segments * 300
+    after_trim_length = total_length - trim_samples
+    
+    if after_trim_length < min_required_samples:
+        return jsonify({"success": False, "message": "파라미터가 유효하지 않습니다. 다시 검증해주세요."})
+    
+    try:
+        print(f"[DEBUG] 최종 처리 시작 - trim_seconds: {trim_seconds}, y_segments: {y_segments}")
+        
+        # 1. 앞에서 자르기
+        if trim_samples > 0:
+            start_idx = trim_samples
+            end_idx = total_length
+            trimmed_data = data[:, start_idx:end_idx]
+            print(f"[DEBUG] 앞에서 {trim_seconds}초({trim_samples}샘플) 제거")
+        else:
+            trimmed_data = data
+            print(f"[DEBUG] 자르기 없음")
+        
+        print(f"[DEBUG] 처리된 데이터 shape: {trimmed_data.shape}")
+        
+        # 2. 세그먼트 나누기
+        segments = []
+        available_segments = trimmed_data.shape[1] // 300
+        segments_to_use = min(y_segments, available_segments)
+        
+        for i in range(segments_to_use):
+            start_sample = i * 300
+            end_sample = start_sample + 300
+            segment = trimmed_data[:, start_sample:end_sample]
+            segments.append(segment)
+            print(f"[DEBUG] 세그먼트 {i+1}: shape {segment.shape}")
+        
+        # 3. 3차원 배열로 변환
+        result_array = np.array(segments)  # shape: (segments_to_use, 4, 300)
+        print(f"[DEBUG] 최종 3차원 배열 shape: {result_array.shape}")
+        
+        # 4. npy 파일로 저장
+        save_dir = "saved_data"  # 저장할 디렉토리
+        os.makedirs(save_dir, exist_ok=True)
+        
+        # 파일명 정리 (확장자 제거)
+        if save_filename.endswith('.npy'):
+            save_filename = save_filename[:-4]
+        
+        save_path = os.path.join(save_dir, f"{save_filename}_{client_id}.npy")
+        np.save(save_path, result_array)
+        
+        # 세션에 처리된 데이터 저장 (필요시 사용)
+        session["processed_data"] = result_array
+        session["last_save_path"] = save_path
+        
+        print(f"[DEBUG] 파일 저장 완료: {save_path}")
+        
+        return jsonify({
+            "success": True,
+            "message": "데이터 처리 및 저장이 완료되었습니다.",
+            "processing_info": {
+                "original_shape": list(data.shape),
+                "final_shape": list(result_array.shape),
+                "trim_seconds": trim_seconds,
+                "segments_created": segments_to_use,
+                "save_path": save_path,
+                "file_size_mb": round(os.path.getsize(save_path) / (1024*1024), 2)
+            }
+        })
+        
+    except Exception as e:
+        print(f"[ERROR] 데이터 처리 및 저장 중 오류: {e}")
+        return jsonify({"success": False, "message": f"처리 중 오류가 발생했습니다: {str(e)}"})
+    
 @app.route("/api/input_npy_data_test", methods=["POST"]) #테스트 할 데이터를 넘파이로 받아줌. input _ csv requst 만들어야됨. 
 def make_data_from_npy_test():
     client_id = session.get('client_id')
     if not client_id:
-        return jsonify({"error": "Session not initialized"}), 401
+        return jsonify({"error": "세션이 만료되었습니다. Session not initialized"}), 401
     
     if 'file' not in request.files:
         return jsonify({"success": False, "message": "파일이 업로드되지 않았습니다."})
@@ -340,7 +550,7 @@ def make_data_from_npy_test():
 
     return jsonify({
         "success": True,
-        "message": "Data saved successfully",
+        "message": "데이터가 성공적으로 전송되었습니다.",
         "Y_label": session["labels"],  # 현재 세션 데이터 반환
         "total_count": total_count
     })
@@ -350,7 +560,7 @@ def make_data_from_npy_test():
 def test():
     client_id = session.get('client_id')
     if not client_id:
-        return jsonify({"error": "Session not initialized"}), 401
+        return jsonify({"error": "세션이 만료되었습니다. Session not initialized"}), 401
     
        
     datatest_list=session["test_set"]
@@ -373,7 +583,7 @@ def test():
 
         def generate():
             for i, pred in enumerate(predicted_class):
-                yield f"data: Test Sample {i+1}: Predicted Motion = {label_encoder.inverse_transform([pred.item()])}\n\n"
+                yield f"data: {i+1} 번째 데이터 : 예측 행동 = {label_encoder.inverse_transform([pred.item()])}\n\n"
                 time.sleep(1)  # 1초 대기 (연속적인 메시지 전송 시뮬레이션)
             yield "data: 총 결과는 이렇답니다~\n\n"  # 마지막 메시지
 
