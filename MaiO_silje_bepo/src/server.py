@@ -365,15 +365,16 @@ def input_csv_data_test():
         return jsonify({"success": False, "message": "CSV 파일만 업로드 가능합니다."})
     
     df = pd.read_csv(file)
-    data = rawpreprocessing.make_csv_array(df)
+    processor = rawpreprocessing()
+    data = processor.make_csv_array(df)
 
     try:
         print(f"[DEBUG] 원본 데이터 shape: {data.shape}")
 
         # 데이터가 4 * N 형태인지 확인
-        if data.shape[0] != 4:
-            raise ValueError(f"데이터의 첫 번째 차원이 4가 아닙니다: {data.shape[0]}")
-        total_length = data.shape[1] / 100
+        if data.shape[1] != 4:
+            raise ValueError(f"데이터의 첫 번째 차원이 4가 아닙니다: {data.shape[1]}")
+        total_length = data.shape[0] / 100
         
         # 세션에 원본 데이터 저장
         session["original_csv_data"] = data
@@ -423,7 +424,7 @@ def validate_parameters():
     
     # CSV 데이터 정보 가져오기
     data = session["original_csv_data"]
-    total_length = data.shape[1]
+    total_length = data.shape[0]
     
     # 계산
     trim_samples = int(trim_seconds * 100)  # 100Hz
@@ -486,7 +487,7 @@ def process_and_save():
     
     # 파라미터 재검증 (안전성을 위해)
     data = session["original_csv_data"]
-    total_length = data.shape[1]
+    total_length = data.shape[0]
     trim_samples = int(trim_seconds * 100)
     min_required_samples = y_segments * 300
     after_trim_length = total_length - trim_samples
@@ -501,7 +502,7 @@ def process_and_save():
         if trim_samples > 0:
             start_idx = trim_samples
             end_idx = total_length
-            trimmed_data = data[:, start_idx:end_idx]
+            trimmed_data = data[start_idx:end_idx, :]
             print(f"[DEBUG] 앞에서 {trim_seconds}초({trim_samples}샘플) 제거")
         else:
             trimmed_data = data
@@ -511,13 +512,13 @@ def process_and_save():
         
         # 2. 세그먼트 나누기
         segments = []
-        available_segments = trimmed_data.shape[1] // 300
+        available_segments = trimmed_data.shape[0] // 300
         segments_to_use = min(y_segments, available_segments)
         
         for i in range(segments_to_use):
             start_sample = i * 300
             end_sample = start_sample + 300
-            segment = trimmed_data[:, start_sample:end_sample]
+            segment = trimmed_data[start_sample:end_sample, :]
             segments.append(segment)
             print(f"[DEBUG] 세그먼트 {i+1}: shape {segment.shape}")
         
@@ -525,22 +526,8 @@ def process_and_save():
         result_array = np.array(segments)  # shape: (segments_to_use, 4, 300)
         print(f"[DEBUG] 최종 3차원 배열 shape: {result_array.shape}")
         
-        # 4. npy 파일로 저장
-        save_dir = "saved_data"  # 저장할 디렉토리
-        os.makedirs(save_dir, exist_ok=True)
-        
-        # 파일명 정리 (확장자 제거)
-        if save_filename.endswith('.npy'):
-            save_filename = save_filename[:-4]
-        
-        save_path = os.path.join(save_dir, f"{save_filename}_{client_id}.npy")
-        np.save(save_path, result_array)
-        
         # 세션에 처리된 데이터 저장 (필요시 사용)
-        session["processed_data"] = result_array
-        session["last_save_path"] = save_path
-        
-        print(f"[DEBUG] 파일 저장 완료: {save_path}")
+        session["test_set"] = result_array
         
         return jsonify({
             "success": True,
@@ -549,9 +536,7 @@ def process_and_save():
                 "original_shape": list(data.shape),
                 "final_shape": list(result_array.shape),
                 "trim_seconds": trim_seconds,
-                "segments_created": segments_to_use,
-                "save_path": save_path,
-                "file_size_mb": round(os.path.getsize(save_path) / (1024*1024), 2)
+                "segments_created": segments_to_use
             }
         })
         

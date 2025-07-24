@@ -99,7 +99,7 @@ export default function TestingPage() {
         success: boolean; 
         file_info?: FileInfo; 
         message?: string 
-      }>(`${API_BASE_URL}/test_csv/upload`, {
+      }>(`${API_BASE_URL}/input_csv_data_test`, {
         method: 'POST',
         body: formData,
         credentials: 'include',
@@ -131,7 +131,7 @@ export default function TestingPage() {
         success: boolean; 
         validation_info?: ValidationInfo; 
         message?: string 
-      }>(`${API_BASE_URL}/test_csv/validate`, {
+      }>(`${API_BASE_URL}/validate_parameters`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -166,7 +166,7 @@ export default function TestingPage() {
         success: boolean; 
         processing_info?: any; 
         message?: string 
-      }>(`${API_BASE_URL}/test_csv/process`, {
+      }>(`${API_BASE_URL}/process_and_save`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
