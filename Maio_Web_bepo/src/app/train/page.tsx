@@ -1,38 +1,96 @@
 'use client';
 
-import { useState, useRef } from 'react';
-import { API_BASE_URL } from '../../utils/fetcher';
+import { useState, useRef, useEffect } from 'react';
+import { API_BASE_URL, fetchJson } from '../../utils/fetcher';
 
 export default function TestingPage() {
   const [isTraining, setIsTraining] = useState(false);
   const [logs, setLogs] = useState<string[]>([]);
   const [isCompleted, setIsCompleted] = useState(false);
+  const [sessionStatus, setSessionStatus] = useState<string>('확인 중...');
   const eventSourceRef = useRef<EventSource | null>(null);
 
-  const handleStartTraining = () => {
+  // 세션 상태 확인
+  useEffect(() => {
+    checkSessionStatus();
+  }, []);
+
+  const checkSessionStatus = async () => {
+    try {
+      const response = await fetchJson<any>(`${API_BASE_URL}/debug_session`, {
+        credentials: 'include'
+      });
+      
+      if (response.client_id && response.has_data_set && response.has_model) {
+        setSessionStatus('✅ 세션 상태 정상');
+      } else {
+        setSessionStatus('❌ 세션 데이터 부족 - 처음부터 다시 시작해주세요');
+      }
+    } catch (error) {
+      setSessionStatus('❌ 세션 확인 실패');
+      console.error('세션 확인 오류:', error);
+    }
+  };
+
+  const handleStartTraining = async () => {
+    // 학습 시작 전 세션 재확인
+    await checkSessionStatus();
+    
+    if (sessionStatus.includes('❌')) {
+      alert('세션에 문제가 있습니다. 처음부터 다시 시작해주세요.');
+      return;
+    }
+
     setIsTraining(true);
     setLogs([]);
     setIsCompleted(false);
 
-    const eventSource = new EventSource(`${API_BASE_URL}/train_data`, { withCredentials: true } as unknown as EventSourceInit);
+    // 직접 fetch를 사용하여 EventSource 대신 스트리밍 처리
+    try {
+      const response = await fetch(`${API_BASE_URL}/train_data`, {
+        method: 'GET',
+        credentials: 'include',
+        headers: {
+          'Accept': 'text/event-stream',
+          'Cache-Control': 'no-cache'
+        }
+      });
 
-    eventSource.onmessage = (event: MessageEvent) => {
-      if (event.data === 'Training completed.') {
-        setIsCompleted(true);
-        setIsTraining(false);
-        eventSource.close();
-      } else {
-        setLogs((prev) => [...prev, event.data]);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
-    };
 
-    eventSource.onerror = () => {
-      setLogs((prev) => [...prev, '❌ 서버와의 연결에 문제가 발생했습니다.']);
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+
+      while (reader) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value);
+        const lines = chunk.split('\n');
+        
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const data = line.substring(6);
+            if (data.trim()) {
+              if (data.includes('학습이 완료되었습니다') || data.includes('Training completed')) {
+                setIsCompleted(true);
+                setIsTraining(false);
+                setLogs(prev => [...prev, '🎉 학습이 완료되었습니다!']);
+                return;
+              } else {
+                setLogs(prev => [...prev, data]);
+              }
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('학습 오류:', error);
+      setLogs(prev => [...prev, `❌ 학습 중 오류 발생: ${error}`]);
       setIsTraining(false);
-      eventSource.close();
-    };
-
-    eventSourceRef.current = eventSource;
+    }
   };
 
   return (
@@ -48,13 +106,18 @@ export default function TestingPage() {
           모든 설정이 끝났다면, 아래 버튼을 눌러 인공지능 학습을 시작하세요.<br />
           학습 진행 상황과 결과가 실시간으로 표시됩니다.
         </p>
+        
+        {/* 세션 상태 표시 */}
+        <div className="text-sm p-2 rounded bg-gray-100">
+          세션 상태: {sessionStatus}
+        </div>
       </div>
 
       <div className="w-full bg-gray-50 shadow-md border border-gray-200 rounded-2xl p-8 flex flex-col items-center space-y-6">
         <button
           onClick={handleStartTraining}
-          disabled={isTraining || isCompleted}
-          className={`w-full bg-black text-white font-semibold py-3 rounded-xl hover:bg-gray-800 transition-all ${isTraining || isCompleted ? 'opacity-50 cursor-not-allowed' : ''}`}
+          disabled={isTraining || isCompleted || sessionStatus.includes('❌')}
+          className={`w-full bg-black text-white font-semibold py-3 rounded-xl hover:bg-gray-800 transition-all ${(isTraining || isCompleted || sessionStatus.includes('❌')) ? 'opacity-50 cursor-not-allowed' : ''}`}
         >
           {isCompleted ? '학습 완료' : isTraining ? '학습 중...' : '학습 시작하기'}
         </button>
@@ -77,7 +140,6 @@ export default function TestingPage() {
         </div>
       </div>
 
-      {/* 다음 단계로 넘어가기 버튼 추가 */}
       {isCompleted && (
         <div className="flex justify-center w-full mt-8">
           <button
@@ -90,7 +152,6 @@ export default function TestingPage() {
         </div>
       )}
 
-      {/* 하단 설명 텍스트 */}
       <p className="text-gray-500 text-sm text-center">
         학습이 완료되면 테스트 페이지로 이동할 수 있습니다.
       </p>
