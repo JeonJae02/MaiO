@@ -232,9 +232,20 @@ def set_params():
     
 @app.route("/api/train_data", methods=["GET"])
 def train_data():
+    print(f"[DEBUG] 세션 상태: {dict(session)}")
+    
     client_id = session.get('client_id')
     if not client_id:
-        return jsonify({"error": "땡땡땡! 처음부터 하셔야할 것 같네요~. Session not initialized"}), 401
+        print("[ERROR] client_id가 없습니다.")
+        return jsonify({"error": "세션이 만료되었습니다. 처음부터 다시 시작해주세요."}), 401
+    
+    # 필수 데이터 체크
+    required_keys = ["data_set", "labels", "stat_var", "fft_var", "model", "params"]
+    missing_keys = [key for key in required_keys if key not in session]
+    
+    if missing_keys:
+        print(f"[ERROR] 누락된 세션 데이터: {missing_keys}")
+        return jsonify({"error": f"필요한 데이터가 없습니다: {missing_keys}"}), 401
     
     t_data_set = session["data_set"]
     t_labels= session["labels"]
@@ -242,6 +253,8 @@ def train_data():
     fft_var=session["fft_var"]
     selected_model=session["model"]
     params=session["params"]
+    
+    print(f"[DEBUG] 학습 시작 - 모델: {selected_model}, 데이터셋 크기: {len(t_data_set)}")
 
     def generate():
         q = Queue()
@@ -250,34 +263,43 @@ def train_data():
             q.put(message)
 
         def run_training():
-            model, label_encoder = train_model.train_NN(
-                selected_model, t_data_set, t_labels,
-                stat_variable=stat_var, fft_variable=fft_var, 
-                _test_size=params[0], _batch_size=params[1], _learning_rate=params[2], _num_epochs=params[3],  # 수정: [3] → params[3]
-                callback=progress_callback
-            )
-            # 모델 및 라벨 인코더 저장
-            
-            os.makedirs('tmp', exist_ok=True)
-            client_dir = os.path.join("tmp", client_id)
-            os.makedirs(client_dir, exist_ok=True)
+            try:
+                model, label_encoder = train_model.train_NN(
+                    selected_model, t_data_set, t_labels,
+                    stat_variable=stat_var, fft_variable=fft_var, 
+                    _test_size=params[0], _batch_size=params[1], _learning_rate=params[2], _num_epochs=params[3],
+                    callback=progress_callback
+                )
+                # 모델 및 라벨 인코더 저장
+                
+                os.makedirs('tmp', exist_ok=True)
+                client_dir = os.path.join("tmp", client_id)
+                os.makedirs(client_dir, exist_ok=True)
 
-            model_path = os.path.join(client_dir, "model.pkl")
-            label_path = os.path.join(client_dir, "label_encoder.pkl")
-            joblib.dump(model, model_path)
-            joblib.dump(label_encoder, label_path)
-            
-            q.put(None)  # 완료 신호
+                model_path = os.path.join(client_dir, "model.pkl")
+                label_path = os.path.join(client_dir, "label_encoder.pkl")
+                joblib.dump(model, model_path)
+                joblib.dump(label_encoder, label_path)
+                
+                print(f"[DEBUG] 모델 저장 완료: {model_path}")
+                
+            except Exception as e:
+                print(f"[ERROR] 학습 중 오류: {e}")
+                q.put(f"오류 발생: {e}")
+            finally:
+                q.put(None)  # 완료 신호
 
         Thread(target=run_training).start()
 
+        # ✅ SVM과 동일한 방식으로 수정
         while True:
             message = q.get()
             if message is None:
                 break
             yield f"data: {message}\n\n"
 
-        yield "data : 학습이 완료되었습니다. \n\n"
+        # ✅ while 루프 밖에서 완료 메시지 전송 (SVM과 동일)
+        yield "data: 학습이 완료되었습니다.\n\n"
 
     def generate_M():
         q = Queue()
@@ -286,23 +308,35 @@ def train_data():
             q.put(message)
 
         def run_training():
-            model, label_encoder = train_model.train_m(selected_model, t_data_set, t_labels, stat_variable=stat_var, fft_variable=fft_var,
-                                                       _test_size=params[0], _n_neighbors=params[1], callback=progress_callback)
-            # 모델 및 라벨 인코더 저장
-            
-            os.makedirs('tmp', exist_ok=True)
-            client_dir = os.path.join("tmp", client_id)
-            os.makedirs(client_dir, exist_ok=True)
+            try:
+                model, label_encoder = train_model.train_m(
+                    selected_model, t_data_set, t_labels, 
+                    stat_variable=stat_var, fft_variable=fft_var,
+                    _test_size=params[0], _n_neighbors=params[1], 
+                    callback=progress_callback
+                )
+                # 모델 및 라벨 인코더 저장
+                
+                os.makedirs('tmp', exist_ok=True)
+                client_dir = os.path.join("tmp", client_id)
+                os.makedirs(client_dir, exist_ok=True)
 
-            model_path = os.path.join(client_dir, "model.pkl")
-            label_path = os.path.join(client_dir, "label_encoder.pkl")
-            joblib.dump(model, model_path)
-            joblib.dump(label_encoder, label_path)
-            
-            q.put(None)  # 완료 신호
+                model_path = os.path.join(client_dir, "model.pkl")
+                label_path = os.path.join(client_dir, "label_encoder.pkl")
+                joblib.dump(model, model_path)
+                joblib.dump(label_encoder, label_path)
+                
+                print(f"[DEBUG] 모델 저장 완료: {model_path}")
+                
+            except Exception as e:
+                print(f"[ERROR] 학습 중 오류: {e}")
+                q.put(f"오류 발생: {e}")
+            finally:
+                q.put(None)  # 완료 신호
 
         Thread(target=run_training).start()
 
+        # ✅ 기존 SVM 방식 그대로 유지
         while True:
             message = q.get()
             if message is None:
@@ -598,6 +632,17 @@ def clear_session():
     # 현재 클라이언트의 세션 초기화
     session.clear()
     return jsonify({"message": "Session cleared!"})
+
+@app.route("/api/debug_session", methods=["GET"])
+def debug_session():
+    return jsonify({
+        "client_id": session.get('client_id'),
+        "has_data_set": 'data_set' in session,
+        "has_labels": 'labels' in session,
+        "has_model": 'model' in session,
+        "has_params": 'params' in session,
+        "session_keys": list(session.keys())
+    })
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
