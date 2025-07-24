@@ -5,16 +5,12 @@ venv/
 flask_session/
 
 MaiO_silje_bepo/flask_session/
-
 MaiO_silje_bepo/src/__pycache__/
-
 MaiO_silje_bepo/src/flask_session/
-
 MaiO_silje_bepo/src/tmp/
-
 MaiO_silje_bepo/src/.env
-
 MaiO_silje_bepo/tmp/
+MaiO_silje_bepo/saved_data
 
 # dependencies
 Maio_Web_bepo/node_modules
