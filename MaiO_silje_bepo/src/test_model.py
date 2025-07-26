@@ -1,6 +1,7 @@
 import torch
 from .SlidingWindow import slidingwindow
 from . import Data_Extract
+from .config import device
 
 def test_NN(test, model, label_encoder, Y_label, stat_variable=103, fft_variable=1):
     tests=[]
@@ -18,7 +19,9 @@ def test_NN(test, model, label_encoder, Y_label, stat_variable=103, fft_variable
             tests.append(Data_Extract.data_extraction(win_datas[len(win_datas)//2], stat_variable=stat_variable, fft_variable=fft_variable).extract_feature())
 
     test_sample = torch.tensor(tests, dtype=torch.float32)
-
+    test_sample = test_sample.to(device)  # 테스트 샘플을 GPU로 이동
+    
+    model = model.to(device)  # 모델을 GPU로 이동
 
     # ========== 5. 테스트 ==========
     model.eval()

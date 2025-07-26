@@ -231,9 +231,7 @@ def set_params():
 
     
 @app.route("/api/train_data", methods=["GET"])
-def train_data():
-    print(f"[DEBUG] 세션 상태: {dict(session)}")
-    
+def train_data():    
     client_id = session.get('client_id')
     if not client_id:
         print("[ERROR] client_id가 없습니다.")
