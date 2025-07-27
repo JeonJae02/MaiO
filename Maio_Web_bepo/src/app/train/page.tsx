@@ -3,6 +3,16 @@
 import { useState, useRef, useEffect } from 'react';
 import { API_BASE_URL, fetchJson } from '../../utils/fetcher';
 
+// ✅ 세션 상태 인터페이스 정의
+interface SessionStatus {
+  client_id: string;
+  has_data_set: boolean;
+  has_labels: boolean;
+  has_model: boolean;
+  has_params: boolean;
+  session_keys: string[];
+}
+
 export default function TestingPage() {
   const [isTraining, setIsTraining] = useState(false);
   const [logs, setLogs] = useState<string[]>([]);
@@ -15,9 +25,18 @@ export default function TestingPage() {
     checkSessionStatus();
   }, []);
 
+  // ✅ 컴포넌트 언마운트 시 EventSource 정리
+  useEffect(() => {
+    return () => {
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close();
+      }
+    };
+  }, []);
+
   const checkSessionStatus = async () => {
     try {
-      const response = await fetchJson<any>(`${API_BASE_URL}/debug_session`, {
+      const response = await fetchJson<SessionStatus>(`${API_BASE_URL}/debug_session`, { // ✅ any 대신 구체적인 타입
         credentials: 'include'
       });
       
@@ -45,52 +64,111 @@ export default function TestingPage() {
     setLogs([]);
     setIsCompleted(false);
 
-    // 직접 fetch를 사용하여 EventSource 대신 스트리밍 처리
-    try {
-      const response = await fetch(`${API_BASE_URL}/train_data`, {
-        method: 'GET',
-        credentials: 'include',
-        headers: {
-          'Accept': 'text/event-stream',
-          'Cache-Control': 'no-cache'
-        }
-      });
+    // ✅ EventSource와 fetch streaming 둘 다 지원
+    const useEventSource = false; // 필요에 따라 true/false 전환
 
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    if (useEventSource) {
+      // EventSource 방식
+      try {
+        eventSourceRef.current = new EventSource(`${API_BASE_URL}/train_data`, {
+          withCredentials: true
+        });
+
+        eventSourceRef.current.onmessage = (event: MessageEvent) => {
+          const data = event.data.trim();
+          
+          if (data === '학습이 완료되었습니다.' || 
+              data.includes('학습이 완료되었습니다') || 
+              data.includes('Training completed')) {
+            setIsCompleted(true);
+            setIsTraining(false);
+            setLogs(prev => [...prev, '🎉 학습이 완료되었습니다!']);
+            if (eventSourceRef.current) {
+              eventSourceRef.current.close();
+            }
+          } else {
+            setLogs(prev => [...prev, data]);
+          }
+        };
+
+        eventSourceRef.current.onerror = () => {
+          setLogs(prev => [...prev, '❌ 서버와의 연결에 문제가 발생했습니다.']);
+          setIsTraining(false);
+          if (eventSourceRef.current) {
+            eventSourceRef.current.close();
+          }
+        };
+      } catch (error) {
+        console.error('EventSource 오류:', error);
+        setLogs(prev => [...prev, `❌ 연결 중 오류 발생: ${error}`]);
+        setIsTraining(false);
       }
+    } else {
+      // fetch streaming 방식 (현재 사용 중인 방식)
+      try {
+        const response = await fetch(`${API_BASE_URL}/train_data`, {
+          method: 'GET',
+          credentials: 'include',
+          headers: {
+            'Accept': 'text/event-stream',
+            'Cache-Control': 'no-cache'
+          }
+        });
 
-      const reader = response.body?.getReader();
-      const decoder = new TextDecoder();
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
 
-      while (reader) {
-        const { done, value } = await reader.read();
-        if (done) break;
+        const reader = response.body?.getReader();
+        const decoder = new TextDecoder();
 
-        const chunk = decoder.decode(value);
-        const lines = chunk.split('\n');
-        
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            const data = line.substring(6);
-            if (data.trim()) {
-              if (data.includes('학습이 완료되었습니다') || data.includes('Training completed')) {
-                setIsCompleted(true);
-                setIsTraining(false);
-                setLogs(prev => [...prev, '🎉 학습이 완료되었습니다!']);
-                return;
-              } else {
-                setLogs(prev => [...prev, data]);
+        while (reader) {
+          const { done, value } = await reader.read();
+          if (done) {
+            // 스트림 종료 시에도 완료 처리
+            setIsCompleted(true);
+            setIsTraining(false);
+            break;
+          }
+
+          const chunk = decoder.decode(value);
+          const lines = chunk.split('\n');
+          
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              const data = line.substring(6).trim();
+              
+              if (data) {
+                if (data === '학습이 완료되었습니다.' || 
+                    data.includes('학습이 완료되었습니다') || 
+                    data.includes('Training completed')) {
+                  setIsCompleted(true);
+                  setIsTraining(false);
+                  setLogs(prev => [...prev, '🎉 학습이 완료되었습니다!']);
+                  return;
+                } else {
+                  setLogs(prev => [...prev, data]);
+                }
               }
             }
           }
         }
+      } catch (error) {
+        console.error('학습 오류:', error);
+        setLogs(prev => [...prev, `❌ 학습 중 오류 발생: ${error}`]);
+        setIsTraining(false);
       }
-    } catch (error) {
-      console.error('학습 오류:', error);
-      setLogs(prev => [...prev, `❌ 학습 중 오류 발생: ${error}`]);
-      setIsTraining(false);
     }
+  };
+
+  // ✅ 학습 중단 함수 (EventSource 정리 포함)
+  const handleStopTraining = () => {
+    if (eventSourceRef.current) {
+      eventSourceRef.current.close();
+      eventSourceRef.current = null;
+    }
+    setIsTraining(false);
+    setLogs(prev => [...prev, '⏹️ 학습이 중단되었습니다.']);
   };
 
   return (
@@ -114,13 +192,25 @@ export default function TestingPage() {
       </div>
 
       <div className="w-full bg-gray-50 shadow-md border border-gray-200 rounded-2xl p-8 flex flex-col items-center space-y-6">
-        <button
-          onClick={handleStartTraining}
-          disabled={isTraining || isCompleted || sessionStatus.includes('❌')}
-          className={`w-full bg-black text-white font-semibold py-3 rounded-xl hover:bg-gray-800 transition-all ${(isTraining || isCompleted || sessionStatus.includes('❌')) ? 'opacity-50 cursor-not-allowed' : ''}`}
-        >
-          {isCompleted ? '학습 완료' : isTraining ? '학습 중...' : '학습 시작하기'}
-        </button>
+        <div className="flex gap-4 w-full">
+          <button
+            onClick={handleStartTraining}
+            disabled={isTraining || isCompleted || sessionStatus.includes('❌')}
+            className={`flex-1 bg-black text-white font-semibold py-3 rounded-xl hover:bg-gray-800 transition-all ${(isTraining || isCompleted || sessionStatus.includes('❌')) ? 'opacity-50 cursor-not-allowed' : ''}`}
+          >
+            {isCompleted ? '학습 완료' : isTraining ? '학습 중...' : '학습 시작하기'}
+          </button>
+          
+          {/* ✅ 학습 중단 버튼 추가 (EventSource 정리용) */}
+          {isTraining && (
+            <button
+              onClick={handleStopTraining}
+              className="px-6 bg-red-500 text-white font-semibold py-3 rounded-xl hover:bg-red-600 transition-all"
+            >
+              중단
+            </button>
+          )}
+        </div>
 
         <div className="w-full h-64 bg-white rounded-lg border border-gray-200 p-4 overflow-y-auto mt-2">
           <h2 className="text-lg font-bold mb-2 text-green-600">학습 로그</h2>
