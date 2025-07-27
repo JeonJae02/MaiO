@@ -11,6 +11,8 @@ from sklearn.preprocessing import LabelEncoder
 from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader, TensorDataset
 from sklearn.metrics import accuracy_score
+import numpy as np
+from .config import device
 
 def train_NN(select_model, data_set, Y_label, stat_variable=103, fft_variable=1, _test_size=0.2, _batch_size=32, _learning_rate=0.001,_num_epochs=60, callback=None):
     num=len(data_set)
@@ -40,10 +42,10 @@ def train_NN(select_model, data_set, Y_label, stat_variable=103, fft_variable=1,
     X_train, X_val, y_train, y_val = train_test_split(X, y_encoded, test_size=_test_size, random_state=42)
 
 
-    X_train_tensor = torch.tensor(X_train, dtype=torch.float32)   # (batch_size, seq_length, input_dim)
-    X_val_tensor = torch.tensor(X_val, dtype=torch.float32)   # (batch_size, seq_length, input_dim)
-    y_train_tensor = torch.tensor(y_train, dtype=torch.long)
-    y_val_tensor = torch.tensor(y_val, dtype=torch.long)
+    X_train_tensor = torch.tensor(np.array(X_train), dtype=torch.float32)   # (batch_size, seq_length, input_dim)
+    X_val_tensor = torch.tensor(np.array(X_val), dtype=torch.float32)   # (batch_size, seq_length, input_dim)
+    y_train_tensor = torch.tensor(np.array(y_train), dtype=torch.long)
+    y_val_tensor = torch.tensor(np.array(y_val), dtype=torch.long)
 
     # Dataset & DataLoader 설정
     # dateset을 n개로 나눠서 최적화 진행
@@ -65,6 +67,8 @@ def train_NN(select_model, data_set, Y_label, stat_variable=103, fft_variable=1,
     # num_layers는 GRU 층
     # output_size는 y_label의 개수
 
+    model = model.to(device)  # 모델을 GPU로 이동
+
 
     # ========== 3. 학습 설정 ==========
     learning_rate=_learning_rate # 학습률, weight를 update할때 얼만큼 weight를 조정할건지, 너무 크면 확확 바뀌고, 너무 작으면 찔끔찔끔 변화함. 적당한 것이 0.001
@@ -78,6 +82,8 @@ def train_NN(select_model, data_set, Y_label, stat_variable=103, fft_variable=1,
     for epoch in range(num_epochs):
         model.train()  # 모델을 훈련 모드로 설정
         for batch_X, batch_y in data_loader:
+            batch_X, batch_y = batch_X.to(device), batch_y.to(device)  # 배치 데이터를 GPU로 이동
+
             optimizer.zero_grad() # 이전 Epoch에서 계산된 기울기(Gradient) 초기화
         
             # Forward
@@ -92,6 +98,8 @@ def train_NN(select_model, data_set, Y_label, stat_variable=103, fft_variable=1,
         total_val_loss = 0
         with torch.no_grad():  # 검증 시에는 gradient 계산을 하지 않음
             for val_X, val_y in val_loader:  # 검증 데이터셋에 대해 예측
+                val_X, val_y = val_X.to(device), val_y.to(device)  # 검증 데이터 GPU로 이동 
+
                 val_outputs = model(val_X)
                 val_loss = criterion(val_outputs, val_y)  # 검증 손실 계산
                 total_val_loss += val_loss.item()  # 누적 검증 손실 계산
