@@ -1,4 +1,4 @@
-export const API_BASE_URL = '/api'; // API 기본 URL
+export const API_BASE_URL = 'http://localhost:5000/api'; // API 기본 URL
 
 export async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
   const response = await fetch(url, options);

@@ -92,7 +92,17 @@ export default function ImportantDataSection() {
       reader.onload = (e) => {
         const text = e.target?.result as string;
         const { headers, rows } = parseCSV(text);
-        charts[idx] = { name: file.name, headers, rows };
+
+        for (let i=1;i<=10;++i) {
+          const copyIndex = idx * 10 + i - 1;
+          const rawDataNumber = idx * 10 + i;
+          charts[copyIndex] = {
+            name: `RawData${rawDataNumber}`,
+            headers,
+            rows
+          };
+        }
+
         filesRead++;
         if (filesRead === filesArr.length) {
           setFileCharts(charts);
