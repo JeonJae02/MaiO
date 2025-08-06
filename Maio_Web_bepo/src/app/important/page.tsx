@@ -189,7 +189,7 @@ export default function ImportantDataSection() {
       const highlight = highlighted[file.name];
       if (highlight && highlight.data.length) {
         const csv = toCSV(file.headers, highlight.data);
-        formData.append('files', new File([csv], file.name));
+        formData.append('files', new File([csv], `${file.name}.csv`));
       }
     });
     if (!formData.has('files')) {
